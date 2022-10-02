@@ -1,0 +1,340 @@
+---
+title: "Marketing Analytics Report"
+subtitle: "Project 1"
+output:
+  html_document:
+    self-contained : yes
+    fig_caption: yes
+    highlight: pygments
+    theme: flatly
+    toc: yes
+    toc_depth: 2
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, comment = NA, message = F, warning = F, fig.align = "center")
+options(pillar.sigfig = 7)
+options(scipen = 999)
+```
+
+
+## Libraries
+
+```{r}
+# install.packages("tidyverse")
+# install.packages("magrittr ")
+library(magrittr ) 
+# install libraries with install.packages("package.name") if required
+library(tidyverse) # for data wrangling and visualization
+```
+
+Reading dataset & Descriptive Analysis
+
+```{r} 
+office <- read.csv("office.csv")
+summary(office)
+glimpse(office)
+
+```
+--- office_dataset
+
+This databse contains data of the 200 respondents and their choice of preferences when it comes to buy the office
+equipment.
+  
+  
+  **Variable** | **Description**
+  :------- | :---------------------------------------
+'respondent_id' | An identifier for our observations
+'variety_of_choice' | Importance of this attribute on a 0-10 scale
+'electronics' | Importance of this attribute on a 0-10 scale
+'furniture' | Importance of this attribute on a 0-10 scale
+'quality_of_service' | Importance of this attribute on a 0-10 scale
+'low_prices' | Importance of this attribute on a 0-10 scale
+'return_policy' | Importance of this attribute on a 0-10 scale
+'professional' | Whether the respondent is a professional or not (e.g., student)
+'income' | Gross annual income expressed in thousands of pound sterling
+'age' | Respondents’ age in years
+
+# Start(Creating tibble/dataframe, normalizing the dataset and calculating minimumn & maximum values)
+
+Now, we need to normalize our data before we run the clustering algorithms. Let us go ahead and normalize our data. 
+Make sure you turn the output into a tibble by using the `as.tibble` function.
+
+Now, create a normalized data frame called `office_norzd` by running the following commands:
+
+
+```{r}
+
+office_norzd<- scale(office[, c(
+                           "variety_of_choice",
+                           "electronics",
+                           "furniture",
+                           "quality_of_service",
+                           "low_prices",
+                           "return_policy"
+                           )]) %>% 
+  as_tibble() # convert to tibble
+
+```
+
+We are now going to check whether all the variables now have mean zero by using the `mean` function. For example, let's check the variables `furniture` and `electronics`:
+
+
+Let's now check which variable has the smallest minimum value and which variables has the largest maximum value in the normalized data set. We can do this by using the `summary` function on `office_norzd`.
+
+```{r}
+summary(office_norzd)
+```
+
+
+# Hierarchical Clustering
+Now let's compute the distances between data points (using euclidean distance).
+
+```{r}
+# compute distance
+distance_points <- dist(office_norzd, 
+                  method = "euclidean") # use Euclidean
+
+# print the distances between the first 5 customers
+as.matrix(distance_points)[1:5, 1:5] 
+```
+
+```{r}
+# run the algorithm and store the result to an object
+hierch_clust <- hclust(distance_points, method = "ward.D") 
+```
+
+Then, plot the dendrogram of the hierarchical clustering process. 
+
+```{r}
+plot(hierch_clust)
+```
+
+# Creating 6 cluster solution
+
+```{r}
+# plot the dendogram again
+plot(hierch_clust)
+
+# now draw rectangles highlighting the clusters
+rect.hclust(hierch_clust, k = 6, border = "red")
+
+# create a six-cluster solution
+hclust_obsv <- cutree(hierch_clust, k = 6)
+
+table(hclust_obsv)
+```
+
+So now, after plotting the dendrogram in six cluster solution. we can come to know the number of observations found in each cluster.
+There are 61 data points in 1st cluster.
+There are 8 data points in 2nd cluster.
+There are 52 data points in 3rd cluster.
+There are 17 data points in 4th cluster.
+There are 33 data points in 5th cluster.
+There are 29 data points in 6th cluster.
+
+
+# Calculating Average values(mean) & flexClust to compare and create segmentation profile plots.
+
+```{r}
+office <- office %>% 
+  mutate(hclust_obsv = hclust_obsv)
+```
+
+Then we can group by cluster and calculate the average values in each of the variables.
+
+```{r}
+office_norzd %>%
+  mutate(hclust_obsv = factor(hclust_obsv)) %>%
+  group_by(hclust_obsv) %>% # group by cluster
+  mutate(n=n())%>%
+  summarise_all(~mean(.x)) %>% # calculate the mean per group 
+  mutate(prop=n/sum(n))%>%
+  print(width = Inf) # prints all variables (all columns)
+
+# Added to remove the lock of directory to install the packages.
+options("install.lock"=FALSE)
+
+# install.packages("flexclust")
+library(flexclust)
+
+hierc_clust_flex <- as.kcca(hierch_clust, office_norzd, k = 6)
+
+# After executing the above line kcca function, the Number of observations in cluster memberships have changed in each clusters. 4 cluster memberships have changed.
+
+table(hclust_obsv, clusters(hierc_clust_flex))
+```
+
+From the table output, 
+cluster 1 corresponds to cluster 5 in the hierarchial observations.
+cluster 2 corresponds to cluster 1 in the hierarchial observations.
+cluster 3 corresponds to cluster 2 in the hierarchial observations.
+cluster 4 corresponds to cluster 3 in the hierarchial observations.
+cluster 5 corresponds to cluster 4 in the hierarchial observations.
+cluster 6 corresponds to cluster 6 in the hierarchial observations.
+
+```{r}
+barchart(hierc_clust_flex, main = "Segment Profiles")
+```
+
+6 cluster's solution is having values as 8 in one of the segments which is very low. whereas, in 5 cluster solutions, comparatively the lower values is 17. so on comparison basis, it is better to go with 5 cluster solutions.
+
+
+```{r} 
+# 5-Cluster solution.
+hier_clust_5 <- hclust(distance_points, method = "ward.D2")
+
+plot(hier_clust_5)
+
+
+# now draw rectangles highlighting the clusters
+rect.hclust(hier_clust_5, k = 5, border = "blue")
+
+# create a five-cluster solution
+hier_clust_obs_5 <- cutree(hier_clust_5, k = 5)
+
+table(hier_clust_obs_5)
+
+```
+
+Desribing Clusters
+
+We can now compare the average values in each of the variables for the 5 clusters (the centroids of the clusters). It is better if we compute the average values of the un-normalized dataset so that it is easier to interpret. 
+
+First let's add the cluster assignment to the un-normalized data set.
+
+```{r}
+office_ <- office %>% 
+  mutate(hier_clust_obs_5 = hier_clust_obs_5)
+```
+
+Then we can group by cluster and calculate the average values in each of the variables.
+
+
+```{r}
+# Added to remove the lock of directory to install the packages.
+options("install.lock"=FALSE)
+
+# install.packages("flexclust")
+library(flexclust)
+
+# Lets calculate the average mean of all the columns.
+office_norzd %>%
+  mutate(hier_clust_obs_5 = hier_clust_obs_5) %>%
+  group_by(hier_clust_obs_5) %>% # group by cluster
+  mutate(n=n())%>%
+  mutate(prop=n/sum(n))%>%
+  summarise_all(~mean(.x)) %>% # calculate the mean per group 
+  print(width = Inf) # prints all variables (all columns)
+
+# Creating 5 cluster solution with kcca clustering method
+hier_clust_flex_5 <- as.kcca(hier_clust_5, office_norzd, k = 5)
+
+# After executing the above line kcca function, the Number of observations in cluster memberships have changed in each clusters and 4 cluster memberships have changed.
+
+#Since the Number of observations got changed. Now, we will check the concordance b/w hclust and as.kcca procedures by executing below table function
+
+# Comparing table o/p of 5 cluster and 6 cluster solutions.
+table(hier_clust_obs_5, clusters(hier_clust_flex_5))
+
+hier_clust_obs_5 <- factor(hier_clust_obs_5,
+              levels = c(1, 2, 3, 4, 5),
+              labels = c("quality_of_service HC_5", "electronics HC_5", "furniture HC_5",
+                         "Professional_service HC_5",
+                         "Non-Professional_service HC_5"))
+
+library(janitor) # for tabyl
+
+office_ <- office_ %>% mutate(hier_clust_obs_5 = hier_clust_obs_5)
+
+office_ %>% 
+  tabyl(hier_clust_obs_5, professional) %>%
+  adorn_totals(c("row", "col")) %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 2) %>%
+  adorn_ns()
+
+office_ %>% 
+  tabyl(hier_clust_obs_5, income) %>%
+  adorn_totals(c("row", "col")) %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 2) %>%
+  adorn_ns()
+
+office_ %>%
+  tabyl(hier_clust_obs_5, age) %>%
+  adorn_totals(c("row", "col")) %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 2) %>%
+  adorn_ns()
+```
+
+so comparing business challenges and business profits, 5 cluster solution is the best solution to predict the no of target audience.#
+
+```{r}
+barchart(hier_clust_flex_5, main = "Segment Profiles")
+```
+
+# K-means Clustering
+
+Let's now run the k-means clustering algorithm on the normalized data, again creating 5 clusters. Set the seed to 123 right before running the clustering algorithm, and set the argument `iter.max` to 1000.
+
+```{r}
+set.seed(123) # for reproducibility
+
+k_means <- kmeans(office_norzd, 
+                       centers = 5, 
+                       iter.max = 1000,
+                       nstart = 100)
+
+
+kmeans_labels <- factor(
+  k_means$cluster,
+  levels = c(1, 2, 3, 4, 5),
+  labels = c("quality_of_service KM_", "electronics KM_", "furniture KM_",
+             "Professional_service KM_",
+             "Non-Professional_service KM_"))
+
+table(k_means$cluster)
+```
+
+Checking concordance between HClust & Kmeans Procedures.
+
+```{r}
+
+office_ <- office_ %>% mutate(kmeans_labels = kmeans_labels)
+
+office_ %>%
+  tabyl(kmeans_labels, professional) %>%
+  adorn_totals(c("row", "col")) %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 2) %>%
+  adorn_ns()
+  
+  office_ %>%
+  tabyl(kmeans_labels, income) %>%
+  adorn_totals(c("row", "col")) %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 2) %>%
+  adorn_ns()
+  
+  office_ %>%
+  tabyl(kmeans_labels, age) %>%
+  adorn_totals(c("row", "col")) %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 2) %>%
+  adorn_ns()
+  
+```
+```{r}
+table(k_means$cluster, hier_clust_obs_5)
+```
+
+```{r}
+hit_Rate <- (59+60+17+33+29)*100
+hit_Rate <- hit_Rate / 200
+hit_Rate
+```
