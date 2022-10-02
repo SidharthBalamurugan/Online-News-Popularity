@@ -1,7 +1,7 @@
 # Online-News-Popularity
 Here, we have analyzed the popularity of news and given out what are all the factors that influence the target variable and provided the influencing predictors which we can focus on improvising the popularity of news. We have used various machine learning classification algorithms and data pre-processing techniques.
 
-Step-by-Procedure for Group-7 machine learning coursework
+Step-by-Procedure for machine learning coursework
 1)	Extract the Grp7 ML&V.zip file
 2)	Open RStudio.
        
