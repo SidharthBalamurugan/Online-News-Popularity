@@ -10,4 +10,4 @@ Step-by-Procedure for machine learning coursework
 4)	In Environment tab(Bottom Right Corner), Files -> Right click dataset -> Import Dataset.
  
 5)	In the Environment tab (Bottom Right Corner), Files -> Open the Grp7_ML&V.R file.   
-6)	Run the code step by step.
+6)	Run the code step by step,
